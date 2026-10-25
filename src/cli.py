@@ -7,7 +7,6 @@ import time
 class Rag():
     def __init__(self):
         self.llm = None
-        self.bm25 = bm25s.BM25
 
     def index(self, max_chunk_size: int = 2000) -> None:
         """Ingest data/raw/ and build the index under data/processed/."""
@@ -32,15 +31,27 @@ class Rag():
                 "chunk_content": chunk.chunk_content})
 
         chunks_content_tokens = bm25s.tokenize(chunks_content)
-        self.bm25 = bm25s.BM25(corpus=corpus)
-        self.bm25.index(chunks_content_tokens)
-        self.bm25.save(str(PROCESSED_DIR))
+        bm25 = bm25s.BM25(corpus=corpus)
+        bm25.index(chunks_content_tokens)
+        bm25.save(str(PROCESSED_DIR))
+        return "Indexing complete!"
 
-
-    def search(self, k: int):
+    def search(self, query: str, k: int):
         """Return the top-k sources for a single query."""
-        self.k = k
-        return k
+        if not isinstance(query, str) :
+            raise ValueError("The variable 'query' must to be"
+                             " string")
+        if (not isinstance(k, int)
+            or k <= 0):
+            raise ValueError("The variable 'k' must to be"
+                             " a positive integer")
+
+        bm25 = bm25s.BM25.load("data/processed")
+        query_tokenized = bm25s.tokenize(query)
+        results, scores = bm25.retrieve(query_tokenized, k=k)
+        print(results, "\n", scores)
+
+
 
     def search_datase(self, dataset_path: str, k: int, save_directory: str) -> None:
         """Run search over a whole dataset and write a StudentSearchResults JSON file."""

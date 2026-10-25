@@ -9,7 +9,7 @@ import fire
 def main() -> None:
     try:
         file = "datasets_public/public/AnsweredQuestions/dataset_code_public.json"
-        config = parse_questions(file, True)
+        config = parse_questions(file)
         fire.Fire(Rag)
 
     except json.decoder.JSONDecodeError as e:

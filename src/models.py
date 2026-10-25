@@ -12,7 +12,6 @@ class MinimalSource(BaseModel):
 class UnansweredQuestion(BaseModel):
     question_id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     question: str
-    model_config = ConfigDict(extra="forbid")
 
 
 class AnsweredQuestion(UnansweredQuestion):
@@ -22,7 +21,6 @@ class AnsweredQuestion(UnansweredQuestion):
     sources: List[MinimalSource]
     difficulty: str
     is_valid: bool
-    model_config = ConfigDict(extra="forbid")
 
 
 class RagDataset(BaseModel):

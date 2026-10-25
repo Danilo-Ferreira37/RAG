@@ -17,7 +17,7 @@ index:
 	uv run python -m src index --max_chunk_size 1500
 
 search:
-	uv run python -m src search --k 5
+	uv run python -m src search "How to configure a OpenIA server?" --k 5
 
 search_datase:
 	uv run python -m src search_datase
