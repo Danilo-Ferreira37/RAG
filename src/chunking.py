@@ -4,10 +4,13 @@ from langchain_text_splitters import MarkdownTextSplitter
 from pathlib import Path
 from src.models import MinimalSource
 import os
+import json
 
 
-DIR = Path("data/raw/index.json")
-PROCESSED_DIR = Path("data/processed/")
+DATA_DIR = Path("data/raw/vllm-0.10.1")
+PROCESSED_DIR = Path("data/processed")
+
+
 def get_chunking_of_python_files(max_chunk_size: int, overlap: int, files_content: list[str], files_path: list[str]):
     splitter = PythonCodeTextSplitter(chunk_size=max_chunk_size,
                                       chunk_overlap=overlap,
@@ -49,7 +52,7 @@ def get_chunks_and_put_in_file(max_chunk_size: int, overlap: int):
     file_path_md = []
     file_path_txt = []
 
-    for file_path in DIR.rglob("*"):
+    for file_path in DATA_DIR.rglob("*"):
         if file_path.is_file and file_path.suffix == ".py":
             with open(file_path) as f:
                 chunks_py.append(f.read())
@@ -68,7 +71,9 @@ def get_chunks_and_put_in_file(max_chunk_size: int, overlap: int):
     chunks = [*get_chunking_of_python_files(max_chunk_size, overlap, chunks_py, file_path_py),
               *get_chunking_of_txt_files(max_chunk_size, overlap, chunks_txt, file_path_txt),
               *get_chunking_of_md_files(max_chunk_size, overlap, chunks_md, file_path_md)]
-    model_chunks = []
+    if not chunks:
+        raise ValueError("No data files to chunknizer, put files in data/raw/vllm-0.10.1")
+    model_chunks: list[MinimalSource] = [] 
 
     for c in chunks:
         model_chunks.append(MinimalSource(
@@ -78,6 +83,7 @@ def get_chunks_and_put_in_file(max_chunk_size: int, overlap: int):
                            last_character_index=c.metadata["end_index"]
                            ))
     
-    PROCESSED_DIR
-
-    return chunks
+    PROCESSED_DIR.mkdir(exist_ok=True, parents=True)
+    with open(f"{str(PROCESSED_DIR)}/chunks.json", "w") as f:    
+        json.dump([model.model_dump() for model in model_chunks], f, indent=4)
+    return (model_chunks, PROCESSED_DIR)

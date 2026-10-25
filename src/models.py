@@ -40,11 +40,9 @@ class MinimalSearchResults(BaseModel):
     question_id: str
     question: str
     retrieved_sources: List[MinimalSource]
-    model_config = ConfigDict(extra="forbid")
 
 class MinimalAnswer(MinimalSearchResults):
     answer: str
-    model_config = ConfigDict(extra="forbid")
 
 
 
@@ -55,9 +53,7 @@ class MinimalAnswer(MinimalSearchResults):
 class StudentSearchResults(BaseModel):
     search_results: List[MinimalSearchResults]
     k: int
-    model_config = ConfigDict(extra="forbid")
 
 class StudentSearchResultsAndAnswer(BaseModel):
     search_results: List[MinimalAnswer]
     k: int
-    model_config = ConfigDict(extra="forbid")

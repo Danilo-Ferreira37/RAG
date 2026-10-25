@@ -7,10 +7,11 @@ install:
 
 clean:
 	@rm -rf src/__pycache__
+	@rm -rf .vscode
 
 fclean:
 	@rm -rf src/__pycache__
-	rm -rf .venv
+	@rm -rf .venv
 
 index:
 	uv run python -m src index --max_chunk_size 1500

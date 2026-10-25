@@ -1,19 +1,40 @@
 from src.chunking import get_chunks_and_put_in_file
 import bm25s
+import json
+import time
 
 
 class Rag():
     def __init__(self):
-        self.bm25 = bm25s
         self.llm = None
+        self.bm25 = bm25s.BM25
 
     def index(self, max_chunk_size: int = 2000) -> None:
         """Ingest data/raw/ and build the index under data/processed/."""
-        if max_chunk_size > 2000:
-            raise ValueError("The max value to 'max_chunk_size' is 2000!")
+        if (not isinstance(max_chunk_size, int)
+            or max_chunk_size > 2000
+            or max_chunk_size <= 0):
+            raise ValueError("The variable 'max_chunk_size' must to be"
+                             " a positive integer and the max value "
+                             "is 2000!")
         self.max_chunk_size = max_chunk_size
         overlap = 25
-        chunks = get_chunks_and_put_in_file(max_chunk_size, overlap)
+
+        chunks, PROCESSED_DIR = get_chunks_and_put_in_file(max_chunk_size, overlap)
+        chunks_content: list[str] = []
+        corpus: list[dict[str, int | str]] = []
+        for chunk in chunks:
+            chunks_content.append(chunk.chunk_content)
+            corpus.append({
+                "file_path": chunk.file_path,
+                "first_character_index": chunk.first_character_index,
+                "last_character_index": chunk.last_character_index,
+                "chunk_content": chunk.chunk_content})
+
+        chunks_content_tokens = bm25s.tokenize(chunks_content)
+        self.bm25 = bm25s.BM25(corpus=corpus)
+        self.bm25.index(chunks_content_tokens)
+        self.bm25.save(str(PROCESSED_DIR))
 
 
     def search(self, k: int):
