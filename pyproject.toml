@@ -11,6 +11,8 @@ dependencies = [
     "bm25s",
     "langchain-text-splitters>=1.1.3",
     "fire>=0.7.1",
+    "transformers>=5.21.0",
+    "pytouch>=0.4.0",
 ]
 
 [tool.uv.sources]

@@ -1,14 +1,14 @@
-from langchain_text_splitters import RecursiveCharacterTextSplitter
-from langchain_text_splitters import PythonCodeTextSplitter
-from langchain_text_splitters import MarkdownTextSplitter
+from langchain_text_splitters import (RecursiveCharacterTextSplitter,
+                                      PythonCodeTextSplitter,
+                                      MarkdownTextSplitter)
+
 from pathlib import Path
 from src.models import MinimalSource
-import os
 import json
 
 
 DATA_DIR = Path("data/raw/vllm-0.10.1")
-PROCESSED_DIR = Path("data/processed")
+
 
 
 def get_chunking_of_python_files(max_chunk_size: int, overlap: int, files_content: list[str], files_path: list[str]):
@@ -44,7 +44,7 @@ def get_chunking_of_md_files(max_chunk_size: int, overlap: int, files_content: l
     return chunks
 
 
-def get_chunks_and_put_in_file(max_chunk_size: int, overlap: int):
+def get_chunks_and_put_in_file(max_chunk_size: int, overlap: int, PROCESSED_DIR: Path):
     chunks_py = []
     chunks_md = []
     chunks_txt = []
@@ -72,7 +72,7 @@ def get_chunks_and_put_in_file(max_chunk_size: int, overlap: int):
               *get_chunking_of_txt_files(max_chunk_size, overlap, chunks_txt, file_path_txt),
               *get_chunking_of_md_files(max_chunk_size, overlap, chunks_md, file_path_md)]
     if not chunks:
-        raise ValueError("No data files to chunknizer, put files in data/raw/vllm-0.10.1")
+        raise ValueError("No data files to chunknizer, put files in data/raw/vllm-0.10.1 with sufixes '.py', '.md', '.txt'")
     model_chunks: list[MinimalSource] = [] 
 
     for c in chunks:
@@ -84,6 +84,6 @@ def get_chunks_and_put_in_file(max_chunk_size: int, overlap: int):
                            ))
     
     PROCESSED_DIR.mkdir(exist_ok=True, parents=True)
-    with open(f"{str(PROCESSED_DIR)}/chunks.json", "w") as f:    
+    with open(f"{str(PROCESSED_DIR)}/chunks.json", "w", encoding="utf-8") as f:    
         json.dump([model.model_dump() for model in model_chunks], f, indent=4)
-    return (model_chunks, PROCESSED_DIR)
+    return model_chunks
