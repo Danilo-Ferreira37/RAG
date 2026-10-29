@@ -1,6 +1,6 @@
 from langchain_text_splitters import (RecursiveCharacterTextSplitter,
                                       PythonCodeTextSplitter,
-                                      MarkdownTextSplitter)
+                                      MarkdownTextSplitter, Language)
 
 from pathlib import Path
 from src.models import MinimalSource
@@ -12,7 +12,7 @@ DATA_DIR = Path("data/raw/vllm-0.10.1")
 
 
 def get_chunking_of_python_files(max_chunk_size: int, overlap: int, files_content: list[str], files_path: list[str]):
-    splitter = PythonCodeTextSplitter(chunk_size=max_chunk_size,
+    splitter = RecursiveCharacterTextSplitter(Language.PYTHON, chunk_size=max_chunk_size,
                                       chunk_overlap=overlap,
                                       add_start_index=True
                                       )
@@ -34,7 +34,8 @@ def get_chunking_of_txt_files(max_chunk_size: int, overlap: int, files_content: 
 
 
 def get_chunking_of_md_files(max_chunk_size: int, overlap: int, files_content: list[str], files_path: list[str]):
-    splitter = MarkdownTextSplitter(chunk_size=max_chunk_size,
+    splitter = RecursiveCharacterTextSplitter(Language.MARKDOWN,
+                                    chunk_size=max_chunk_size,
                                     chunk_overlap=overlap,
                                     add_start_index=True,
                                     )
@@ -68,9 +69,9 @@ def get_chunks_and_put_in_file(max_chunk_size: int, overlap: int, PROCESSED_DIR:
                 chunks_txt.append(f.read())
                 file_path_txt.append({"file_path": file_path._str})
 
-    chunks = [*get_chunking_of_python_files(max_chunk_size, overlap, chunks_py, file_path_py),
-              *get_chunking_of_txt_files(max_chunk_size, overlap, chunks_txt, file_path_txt),
-              *get_chunking_of_md_files(max_chunk_size, overlap, chunks_md, file_path_md)]
+    chunks = [*get_chunking_of_txt_files(max_chunk_size, overlap, chunks_txt, file_path_txt),
+              *get_chunking_of_md_files(max_chunk_size, overlap, chunks_md, file_path_md),
+              *get_chunking_of_python_files(max_chunk_size, overlap, chunks_py, file_path_py)]
     if not chunks:
         raise ValueError("No data files to chunknizer, put files in data/raw/vllm-0.10.1 with sufixes '.py', '.md', '.txt'")
     model_chunks: list[MinimalSource] = [] 

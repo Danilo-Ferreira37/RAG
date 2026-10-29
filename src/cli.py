@@ -1,4 +1,4 @@
-from src.models import MinimalSource, MinimalSearchResults, StudentSearchResults, MinimalAnswer, StudentSearchResultsAndAnswer, RagDataset, UnansweredQuestion
+from src.models import MinimalSource, MinimalSearchResults, StudentSearchResults, MinimalAnswer, StudentSearchResultsAndAnswer, RagDataset, UnansweredQuestion, AnsweredQuestion
 from src.chunking import get_chunks_and_put_in_file
 from src.execptions import RAGError
 from src.load import parse_questions
@@ -30,7 +30,7 @@ class Rag():
             chunks_content.append(chunk.chunk_content)
 
         chunks_content_tokens = bm25s.tokenize(chunks_content)
-        bm25 = bm25s.BM25()
+        bm25 = bm25s.BM25(method="bm25l", k1=1, b=0.5)
         bm25.index(chunks_content_tokens)
         bm25.save(str(PROCESSED_DIR))
         return "Indexing complete!"
@@ -112,14 +112,15 @@ class Rag():
             raise ValueError("The variable 'student_search_results_path' and 'save_directory"
                              "' must to be a string that represents a path")
         # verificar se o file exitse, eu tenho uma ideia de rastrear o nome do file co erro
-        
+        tokenizer: PreTrainedTokenizer = AutoTokenizer.from_pretrained("Qwen/Qwen3-0.6B")
+        model: PreTrainedModel = AutoModelForCausalLM.from_pretrained("Qwen/Qwen3-0.6B")
         with open(student_search_results_path, encoding="utf-8") as f:
             file = json.load(f)
         search_results: StudentSearchResults = [StudentSearchResults.model_validate(file)]
         answers_list: list[MinimalAnswer] = []
 
         for metadata in search_results[0].search_results:
-            answer = self.__get_answer(metadata.question, metadata)
+            answer = self.__get_answer(metadata.question, metadata, tokenizer, model)
             answers_list.append(MinimalAnswer(question=metadata.question,
                                               question_id=metadata.question_id,
                                               retrieved_sources=metadata.retrieved_sources,
@@ -131,16 +132,51 @@ class Rag():
         with open(destiny_dir / "StudentSearchResultsAndAnswer.json", "w", encoding="utf-8") as f:
             json.dump(search_results_and_answer.model_dump(), f, indent=4)
 
+
+
+    def __IoU(self, eval_start_index, eval_end_index, student_start_index, student_end_index):
+        eval_range = eval_end_index - eval_start_index
+        student_range = student_end_index - student_start_index
+
+        inter_start = max(eval_start_index, student_start_index)
+        inter_end = min(eval_end_index, student_end_index)
+        inter = max(0, inter_end - inter_start)
+        union = eval_range + student_range - inter
+        iou = inter / union if union > 0 else 0
+        return iou
+        
+
+    def __recallok(self, eval_results, student_results):
+        for evall, student in zip(eval_results, student_results):
+            if evall.sources[0].file_path == student.retrieved_sources[0].file_path and self.__IoU(evall.sources[0].first_character_index,
+                                                                                                   evall.sources[0].last_character_index,
+                                                                                                   student.retrieved_sources[0].first_character_index,
+                                                                                                   student.retrieved_sources[0].last_character_index):
+                print("passou danilo")
+            else:
+                print("nao passou")
+
     def evaluate(self, student_search_results_path: str, dataset_path: str):
         """Report your own recall@k against a ground-truth dataset, for your own testing."""
+
         if not isinstance(student_search_results_path, str) or not isinstance(dataset_path, str):
             raise ValueError("The variable 'student_search_results_path' and 'dataset_path"
-                             "' must to be a string that represents a path")
+                            "' must to be a string that represents a path")
 
-    def __get_answer(self, query: str, top_k_chunks_model: MinimalSearchResults):
+        with open(student_search_results_path, encoding="utf-8") as f:
+            file = json.load(f)
+        student_search_results_and_answer_model: StudentSearchResultsAndAnswer = StudentSearchResultsAndAnswer.model_validate(file)
+        with open(dataset_path, encoding="utf-8") as f:
+            file = json.load(f)
+        rag_questions_model: RagDataset[Answered] = RagDataset.model_validate(file)
+
+        eval_results = rag_questions_model.rag_questions
+        student_results = student_search_results_and_answer_model.search_results
+        self.__recallok(eval_results, student_results)
+
+
+    def __get_answer(self, query: str, top_k_chunks_model: MinimalSearchResults, tokenizer, model):
         chunks_content: list[str] = [chunk.chunk_content for chunk in top_k_chunks_model.retrieved_sources]
-        tokenizer: PreTrainedTokenizer = AutoTokenizer.from_pretrained("Qwen/Qwen3-0.6B")
-        model: PreTrainedModel = AutoModelForCausalLM.from_pretrained("Qwen/Qwen3-0.6B")
 
         prompt = self.__prompt_to_qwen(tokenizer, chunks_content, query)
         prompt_tokenized = tokenizer(prompt, return_tensors="pt")

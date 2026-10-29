@@ -1,0 +1,41 @@
+uv run python -m src evaluate output/StudentSearchResultsAndAnswer.json datasets_public/public/AnsweredQuestions/dataset_code_public.json
+What activation formats does the fused batched MoE layer return in vLLM?
+What activation formats does the fused batched MoE layer return in vLLM?
+
+failed
+
+What are the default values for FP8_MIN and FP8_MAX constants in vLLM's triton_flash_attention module?
+What are the default values for FP8_MIN and FP8_MAX constants in vLLM's triton_flash_attention module?
+
+failed
+
+What determines whether vLLM's sampler returns Pythonized results or deferred Pythonization arguments?
+What determines whether vLLM's sampler returns Pythonized results or deferred Pythonization arguments?
+
+passed
+
+What's the default value of trust_remote_code in vLLM's LLM class constructor?
+What's the default value of trust_remote_code in vLLM's LLM class constructor?
+
+failed
+
+What determines the values in cudagraph_inputs_embeds when capturing CUDA graph shapes in vLLM's ModelRunner?
+What determines the values in cudagraph_inputs_embeds when capturing CUDA graph shapes in vLLM's ModelRunner?
+
+passed
+
+What conditions must be met for vLLM's ModelRunner to use CUDA graphs instead of the regular model?
+What conditions must be met for vLLM's ModelRunner to use CUDA graphs instead of the regular model?
+
+failed
+
+What is the default timeout value for vLLM RPC operations?
+What is the default timeout value for vLLM RPC operations?
+
+failed
+
+What does the Gemma3ForCausalLM constructor assert about the tie_word_embeddings configuration?
+What does the Gemma3ForCausalLM constructor assert about the tie_word_embeddings configuration?
+
+failed
+
