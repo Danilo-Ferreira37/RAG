@@ -1,4 +1,3 @@
-from src.load import parse_questions
 from pydantic import ValidationError
 import json
 from src.cli import Rag
@@ -28,6 +27,7 @@ def main() -> None:
     except BaseException as e:
         print(e)
         exit(1)
+
 
 if __name__ == "__main__":
     main()
