@@ -24,7 +24,7 @@ class Rag():
         self.max_chunk_size = max_chunk_size
         overlap = 25
 
-        chunks = get_chunks_and_put_in_file(max_chunk_size, overlap, PROCESSED_DIR)
+        chunks: list[MinimalSource] = get_chunks_and_put_in_file(max_chunk_size, overlap, PROCESSED_DIR)
         chunks_content: list[str] = []
         for chunk in chunks:
             chunks_content.append(chunk.chunk_content)
@@ -97,14 +97,16 @@ class Rag():
                                     retrieved_sources=top_k_chunks.retrieved_sources))
         DESTINY_DIR = Path(save_directory)
         DESTINY_DIR.mkdir(exist_ok=True, parents=True)
-        with open(DESTINY_DIR / "StudentSearchResults.json", "w", encoding="utf-8") as f:
+        file_name = "StudentSearchResultscode.json" if "code" in dataset_path else "StudentSearchResultsdocs.json"
+        with open(DESTINY_DIR / file_name, "w", encoding="utf-8") as f:
             json.dump(StudentSearchResults(search_results=list_minimal_search_results, k=k).model_dump(), f, indent=4)
     
     def answer(self, query: str, k: int):
         """Answer a single query using the retrieved context."""
-
+        tokenizer: PreTrainedTokenizer = AutoTokenizer.from_pretrained("Qwen/Qwen3-0.6B")
+        model: PreTrainedModel = AutoModelForCausalLM.from_pretrained("Qwen/Qwen3-0.6B")
         top_k_chunks_model: MinimalSearchResults = self.search(query, k)
-        return self.__get_answer(query, top_k_chunks_model)
+        return self.__get_answer(query, top_k_chunks_model, tokenizer, model)
 
     def answer_dataset(self, student_search_results_path: str, save_directory: str):
         """Generate answers for a dataset, producing a StudentSearchResultsAndAnswerJSON file."""
@@ -133,7 +135,6 @@ class Rag():
             json.dump(search_results_and_answer.model_dump(), f, indent=4)
 
 
-
     def __IoU(self, eval_start_index, eval_end_index, student_start_index, student_end_index):
         eval_range = eval_end_index - eval_start_index
         student_range = student_end_index - student_start_index
@@ -143,18 +144,25 @@ class Rag():
         inter = max(0, inter_end - inter_start)
         union = eval_range + student_range - inter
         iou = inter / union if union > 0 else 0
-        return iou
+        if iou >= 0.05:
+            return True
+        return False
         
-
     def __recallok(self, eval_results, student_results):
+        aproved = 0
+        rejected = 0
         for evall, student in zip(eval_results, student_results):
-            if evall.sources[0].file_path == student.retrieved_sources[0].file_path and self.__IoU(evall.sources[0].first_character_index,
-                                                                                                   evall.sources[0].last_character_index,
-                                                                                                   student.retrieved_sources[0].first_character_index,
-                                                                                                   student.retrieved_sources[0].last_character_index):
-                print("passou danilo")
+            if any((evall.sources[0].file_path == source.file_path
+               and self.__IoU(evall.sources[0].first_character_index,
+                              evall.sources[0].last_character_index,
+                              source.first_character_index,
+                              source.last_character_index))
+                              for source in student.retrieved_sources):
+                aproved += 1
             else:
-                print("nao passou")
+                rejected += 1
+
+        return aproved, rejected
 
     def evaluate(self, student_search_results_path: str, dataset_path: str):
         """Report your own recall@k against a ground-truth dataset, for your own testing."""
@@ -165,14 +173,17 @@ class Rag():
 
         with open(student_search_results_path, encoding="utf-8") as f:
             file = json.load(f)
-        student_search_results_and_answer_model: StudentSearchResultsAndAnswer = StudentSearchResultsAndAnswer.model_validate(file)
+        student_search_results_and_answer_model: StudentSearchResults = StudentSearchResults.model_validate(file)
         with open(dataset_path, encoding="utf-8") as f:
             file = json.load(f)
-        rag_questions_model: RagDataset[Answered] = RagDataset.model_validate(file)
+        rag_questions_model: RagDataset[AnsweredQuestion] = RagDataset.model_validate(file)
 
         eval_results = rag_questions_model.rag_questions
         student_results = student_search_results_and_answer_model.search_results
-        self.__recallok(eval_results, student_results)
+        aproved, rejected = self.__recallok(eval_results, student_results)
+        total = aproved + rejected
+        print("total:", total, "| aproved:", aproved, "| rejected:", rejected)
+        print("Percentage:", aproved * 100 / total)
 
 
     def __get_answer(self, query: str, top_k_chunks_model: MinimalSearchResults, tokenizer, model):
@@ -209,9 +220,8 @@ class Rag():
                 {
                     "role": "user",
                     "content": (
-                        f"Context:\n{'\n\n'.join(chunks_content)}"
-                        f"\n\nQuestion: {query}"
-                    )
+                                f"Context:\n{'\n\n'.join(chunks_content)}"
+                                f"\n\nQuestion: {query}")
                 }
             ]
         return tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True, enable_thinking=False)
