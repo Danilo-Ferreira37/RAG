@@ -3,6 +3,14 @@ import json
 
 
 def load_questions(path: str) -> list[UnansweredQuestion]:
+    """
+    Load questions from a JSON dataset file.
+
+    Validates the dataset using the RagDataset model and
+    converts its questions into UnansweredQuestion objects.
+
+    Raises FileNotFoundError if the dataset file is missing.
+    """
     try:
         with open(path, "r", encoding="utf-8") as f:
             file_json: dict[str, object] = json.load(f)

@@ -6,6 +6,13 @@ from src.execptions import RAGError
 
 
 def main() -> None:
+    """
+    Initialize the RAG command-line interface using Fire.
+
+    Executes the selected command and handles common errors
+    related to JSON parsing, data validation, missing files,
+    retrieval, and invalid arguments.
+    """
     try:
         fire.Fire(Rag)
 

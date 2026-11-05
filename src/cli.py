@@ -25,10 +25,26 @@ PROCESSED_DIR = Path("data/processed")
 MODEL_NAME = "Qwen/Qwen3-0.6B"
 
 
-class Rag():
+class Rag:
+    """
+    Implements a Retrieval-Augmented Generation (RAG) system
+    for the vLLM codebase.
+
+    Uses the Fire module to expose its methods as CLI commands,
+    allowing users to index documents, retrieve relevant
+    context, generate answers, and evaluate retrieval results.
+
+    Combines BM25 retrieval with a language model to generate
+    answers grounded in the retrieved context.
+    """
     @staticmethod
     def index(max_chunk_size: int = 2000) -> str:
-        """Ingest data/raw/ and build the index under data/processed/."""
+        """
+        Split source files into chunks and build the BM25 index.
+
+        Chunks are saved to the processed data directory and used
+        to create the index required for document retrieval.
+        """
         if (not isinstance(max_chunk_size, int)
             or max_chunk_size > 2000
                 or max_chunk_size <= 0):
@@ -50,15 +66,22 @@ class Rag():
         bm25 = bm25s.BM25()
         bm25.index(chunks_content_tokens, show_progress=True)
         bm25.save(str(PROCESSED_DIR))
-        return "Indexing complete!"
+        return "\033[93mIndexing complete!"
 
     def search(self, query: str, k: int) -> None:
-
-        """Return the top-k sources for a single query."""
-        minimal_search_results = self.__do_search(query, k)
-        with open(PROCESSED_DIR / "search_results.json",
+        """
+        Retrieve the most relevant chunks for a single query.
+        Uses the BM25 index to find the top-k matching sources
+        and saves the retrieval results to a JSON file.
+        """
+        minimal_search_results = self._do_search(query, k)
+        PATH_FILE = Path("data/output/")
+        PATH_FILE.mkdir(exist_ok=True, parents=True)
+        with open(PATH_FILE / "search_results.json",
                   "w", encoding="utf-8") as f:
             json.dump(minimal_search_results.model_dump(), f, indent=4)
+        print(f"\033[96mThe file with the top-k sources to query: "
+              f"'{query}' was created in {PATH_FILE/"search_results.json"}")
 
     def search_dataset(
             self,
@@ -66,8 +89,11 @@ class Rag():
             k: int,
             save_directory: str
     ) -> None:
-        """Run search over a whole dataset and write a StudentSearchResults
-        JSON file."""
+        """
+        Retrieve relevant sources for each question in a dataset.
+        Uses the BM25 index to retrieve the top-k chunks for
+        each question and saves the results to a JSON file.
+        """
         if not isinstance(dataset_path, str) or not isinstance(save_directory,
                                                                str):
             raise ValueError("The variable 'dataset_path' and 'save_directory"
@@ -81,10 +107,9 @@ class Rag():
 
         list_minimal_search_results: list[MinimalSearchResults] = []
         for question in tqdm(load_questions(dataset_path),
-                             desc="Retrieving the most "
-                             "relevant chunks with BM25"):
+                             desc="Retrieving chunks with BM25"):
             try:
-                top_k_chunks: MinimalSearchResults = self.__do_search(
+                top_k_chunks: MinimalSearchResults = self._do_search(
                     question.question, k)
             except RAGError:
                 print(f"The database does not have enough context to "
@@ -98,9 +123,7 @@ class Rag():
 
         DESTINY_DIR = Path(save_directory)
         DESTINY_DIR.mkdir(exist_ok=True, parents=True)
-        file_name = ("StudentSearchResultscode.json" if "code"
-                     in dataset_path else "StudentSearchResultsdocs.json")
-        with open(DESTINY_DIR / file_name,
+        with open(DESTINY_DIR / "search_results.json",
                   "w",
                   encoding="utf-8") as f:
             json.dump(StudentSearchResults(
@@ -108,18 +131,26 @@ class Rag():
                 k=k).model_dump(), f, indent=4)
 
     def answer(self, query: str, k: int) -> str:
-        """Answer a single query using the retrieved context."""
+        """
+        Generate an answer to a single query using the RAG pipeline.
+        Retrieves the most relevant chunks and uses them as context
+        for the language model to generate an answer.
+        """
         name = MODEL_NAME
         tokenizer: Any = AutoTokenizer.from_pretrained(name)
         model: PreTrainedModel = AutoModelForCausalLM.from_pretrained(name)
-        top_k_chunks_model: MinimalSearchResults = self.__do_search(query, k)
-        return self.__get_answer(query, top_k_chunks_model, tokenizer, model)
+        top_k_chunks_model: MinimalSearchResults = self._do_search(query, k)
+        return self._get_answer(query, top_k_chunks_model, tokenizer, model)
 
     def answer_dataset(self,
                        student_search_results_path: str,
                        save_directory: str) -> None:
-        """Generate answers for a dataset,
-        producing a StudentSearchResultsAndAnswerJSON file."""
+        """
+        Generate answers for questions with previously retrieved sources.
+        Loads the search results, generates an answer for each
+        question using the retrieved context, and saves the
+        answers and sources to a JSON file.
+        """
         if (
             not isinstance(student_search_results_path, str)
             or not isinstance(save_directory, str)
@@ -127,6 +158,7 @@ class Rag():
             raise ValueError("The variable 'student_search_results_path' "
                              "and 'save_directory"
                              "' must to be a string that represents a path")
+
         name = MODEL_NAME
         tokenizer: Any = AutoTokenizer.from_pretrained(name)
         model: PreTrainedModel = AutoModelForCausalLM.from_pretrained(name)
@@ -135,6 +167,8 @@ class Rag():
         search_results: StudentSearchResults = (
             StudentSearchResults.model_validate(file)
         )
+        total: int = len(search_results.search_results)
+        print(f"Loaded {total} questions ...")
         answers_list: list[MinimalAnswer] = []
 
         for metadata in tqdm(search_results.search_results,
@@ -148,14 +182,20 @@ class Rag():
                                                k=search_results.k)
         destiny_dir = Path(save_directory)
         destiny_dir.mkdir(exist_ok=True, parents=True)
+        print(f"Processed {total} of {total} question")
         with open(destiny_dir / "StudentSearchResultsAndAnswer.json",
                   "w", encoding="utf-8") as f:
             json.dump(output.model_dump(), f, indent=4)
+        print(f"Saved student_search_results_and_answer to "
+              f"{destiny_dir}/StudentSearchResultsAndAnswer.json")
 
     @staticmethod
     def evaluate(student_search_results_path: str, dataset_path: str) -> None:
-        """Report your own recall@k against a
-        ground-truth dataset, for your own testing."""
+        """
+        Evaluate retrieval performance using recall@k.
+        Compares the retrieved sources against the expected sources
+        in a reference dataset and reports the evaluation results.
+        """
         if (
             not isinstance(student_search_results_path, str)
             or not isinstance(dataset_path, str)
@@ -171,18 +211,31 @@ class Rag():
             file = json.load(f)
         data: RagDataset = RagDataset.model_validate(file)
 
+        print("\033[94mStudent data is valid: True\033[0m")
         eval_results = cast(list[AnsweredQuestion], data.rag_questions)
         student_results = answer_model.search_results
-        aproved, rejected = recallok(eval_results, student_results)
-        total = aproved + rejected
-        print("total:", total, "| aproved:", aproved, "| rejected:", rejected)
-        print("Percentage:", aproved * 100 / total)
+        print("Total number of questions:", len(eval_results))
+        print("Total number of questions with student sources:",
+              len(student_results))
 
-    def __get_answer(self,
-                     query: str,
-                     top_k_chunks_model: MinimalSearchResults,
-                     tokenizer: Any,
-                     model: PreTrainedModel) -> str:
+        print("\nEvaluation results")
+        print("=" * 45)
+        aproved, rejected = recallok(eval_results, student_results)
+        total: int = aproved + rejected
+        print("Questions evaluated:", aproved + rejected)
+        print(f"\033[94mRecall@{len(student_results[0].retrieved_sources)}: "
+              f"{aproved / 100} ({aproved * 100 / total:.1f}%)")
+
+    def _get_answer(self,
+                    query: str,
+                    top_k_chunks_model: MinimalSearchResults,
+                    tokenizer: Any,
+                    model: PreTrainedModel) -> str:
+        """
+        Generate an answer using the language model and retrieved context.
+        Builds a prompt containing the query and retrieved chunks,
+        then generates and decodes the model's response.
+        """
         chunks_content: list[str] = [
             chunk.chunk_content
             for chunk in top_k_chunks_model.retrieved_sources
@@ -200,10 +253,16 @@ class Rag():
         return cast(str, answer)
 
     @staticmethod
-    def __do_search(
+    def _do_search(
         query: str,
         k: int
     ) -> MinimalSearchResults:
+        """
+        Retrieve the most relevant chunks for a given query.
+
+        Loads the BM25 index, tokenizes the query, retrieves the
+        top-k results, and returns them as a MinimalSearchResults model.
+        """
         if not isinstance(query, str):
             raise ValueError("The variable 'query' must to be"
                              "a string")
@@ -246,6 +305,13 @@ class Rag():
     def __prompt_to_qwen(tokenizer: Any,
                          chunks_content: list[str],
                          query: str) -> str:
+        """
+        Build a prompt for Qwen using the query and retrieved context.
+
+        Creates system and user messages that instruct the model
+        to answer using only the provided context, then applies
+        the tokenizer's chat template to format the prompt.
+        """
         messages = [
                 {
                     "role": "system",
@@ -289,10 +355,17 @@ class Rag():
                                  metadata: MinimalSearchResults,
                                  tokenizer: Any,
                                  model: PreTrainedModel) -> MinimalAnswer:
-        answer = self.__get_answer(metadata.question,
-                                   metadata,
-                                   tokenizer,
-                                   model)
+        """
+        Generate an answer and combine it with the retrieved sources.
+
+        Uses the question metadata and language model to generate
+        an answer, then returns a MinimalAnswer containing the
+        question, its sources, and the generated answer.
+        """
+        answer = self._get_answer(metadata.question,
+                                  metadata,
+                                  tokenizer,
+                                  model)
         return MinimalAnswer(question=metadata.question,
                              question_id=metadata.question_id,
                              retrieved_sources=metadata.retrieved_sources,

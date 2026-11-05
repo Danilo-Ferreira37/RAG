@@ -11,12 +11,18 @@ DATA_DIR = Path("data/raw/vllm-0.10.1")
 
 
 def get_chunking_of_python_files(
-    max_chunk_size: int,
-    overlap: int,
-    files_content: list[str],
-    files_path: list[dict[str, Any]]
+        max_chunk_size: int,
+        overlap: int,
+        files_content: list[str],
+        files_path: list[dict[str, Any]]
 ) -> list[Document]:
+    """
+    Split Python source files into overlapping text chunks.
 
+    Uses a Python-specific text splitter to preserve the
+    structure of the source code and records the character
+    indices of each chunk within its original file.
+    """
     splitter = RecursiveCharacterTextSplitter.from_language(
         language=Language.PYTHON,
         chunk_size=max_chunk_size,
@@ -40,11 +46,19 @@ def get_chunking_of_python_files(
 
 
 def get_chunking_of_txt_files(
-    max_chunk_size: int,
-    overlap: int,
-    files_content: list[str],
-    files_path: list[dict[str, Any]]
+        max_chunk_size: int,
+        overlap: int,
+        files_content: list[str],
+        files_path: list[dict[str, Any]]
 ) -> list[Document]:
+    """
+    Split plain text files into overlapping text chunks.
+
+    Uses a recursive text splitter to divide the documents
+    according to the specified chunk size and overlap.
+
+    Records the character indices of each chunk.
+    """
 
     splitter = RecursiveCharacterTextSplitter(
         chunk_size=max_chunk_size,
@@ -68,11 +82,18 @@ def get_chunking_of_txt_files(
 
 
 def get_chunking_of_md_files(
-    max_chunk_size: int,
-    overlap: int,
-    files_content: list[str],
-    files_path: list[dict[str, Any]]
+        max_chunk_size: int,
+        overlap: int,
+        files_content: list[str],
+        files_path: list[dict[str, Any]]
 ) -> list[Document]:
+    """
+    Split Markdown files into overlapping text chunks.
+
+    Uses a Markdown-specific text splitter to preserve
+    document structure and records the character indices
+    of each chunk within its original file.
+    """
 
     splitter = RecursiveCharacterTextSplitter.from_language(
         language=Language.MARKDOWN,
@@ -97,11 +118,19 @@ def get_chunking_of_md_files(
 
 
 def get_chunks_and_put_in_file(
-    max_chunk_size: int,
-    overlap: int,
-    PROCESSED_DIR: Path
+        max_chunk_size: int,
+        overlap: int,
+        PROCESSED_DIR: Path
 ) -> list[MinimalSource]:
+    """
+    Process source files and save their chunks to a JSON file.
 
+    Collects Python, Markdown, and plain text files from
+    the source directory and splits them into chunks.
+
+    Converts the chunks into MinimalSource objects, saves
+    them to the processed directory, and returns the list.
+    """
     chunks_py: list[str] = []
     chunks_md: list[str] = []
     chunks_txt: list[str] = []
