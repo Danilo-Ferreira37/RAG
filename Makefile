@@ -5,13 +5,25 @@ run:
 	@$(UV_RUN)
 
 install:
-	uv sync
+	@mkdir -p $$HOME/sgoinfre/.cache
+
+	@if [ -d $$HOME/.cache ] && [ ! -L $$HOME/.cache ]; then \
+	    cp -a $$HOME/.cache/. $$HOME/sgoinfre/.cache/; \
+	    rm -rf $$HOME/.cache; \
+	fi
+
+	@if [ ! -e $$HOME/.cache ]; then \
+	    ln -s $$HOME/sgoinfre/.cache $$HOME/.cache; \
+	fi
+
+	@test -d $(VENV) || uv sync
 
 clean:
 	@rm -rf src/__pycache__
 	@rm -rf .vscode/
 	@rm -rf data/processed
 	@rm -rf output
+	@rm -rf data/output
 	@rm -rf build/
 	@rm -rf .mypy_cache/
 	@clear
@@ -19,8 +31,9 @@ clean:
 fclean:
 	@rm -rf src/__pycache__
 	@rm -rf .vscode
-	@rm -rf data/processed
 	@rm -rf output/
+	@rm -rf data
+	@rm -rf datasets_public
 	@rm -rf build/
 	@rm -rf .mypy_cache/
 	@rm -rf .venv
@@ -38,16 +51,16 @@ search:
 	$(UV_RUN) search "How to configure a OpenIA server?" --k 5
 
 search_dataset:
-	$(UV_RUN) search_dataset datasets_public/public/UnansweredQuestions/dataset_docs_public.json --k 5 output
+	$(UV_RUN) search_dataset datasets_public/public/UnansweredQuestions/dataset_code_public.json --k 5 output
 
 answer:
 	$(UV_RUN) answer "How to configure a OpenIA server?" --k 5
 
 answer_dataset:
-	$(UV_RUN) answer_dataset output/StudentSearchResultsdocs.json output
+	$(UV_RUN) answer_dataset output/search_dataset_results.json output
 
 evaluate:
-	$(UV_RUN) evaluate output/StudentSearchResultscode.json datasets_public/public/AnsweredQuestions/dataset_code_public.json
+	$(UV_RUN) evaluate output/search_dataset_results.json datasets_public/public/AnsweredQuestions/dataset_code_public.json
 
 deploy:
 	uv run uvicorn src.api:app --reload &

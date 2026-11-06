@@ -23,7 +23,7 @@ def main() -> None:
         print(f"Error: {e}")
         exit(1)
     except FileNotFoundError as e:
-        print(f"Error: {e}")
+        print(f"File config not found: {e}")
         exit(1)
     except RAGError as e:
         print(f"Error: {e}")
@@ -32,7 +32,7 @@ def main() -> None:
         print(f"Error: {e}")
         exit(1)
     except BaseException as e:
-        print(e)
+        print("Fatal error:", e)
         exit(1)
 
 

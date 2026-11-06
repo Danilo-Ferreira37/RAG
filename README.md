@@ -22,6 +22,8 @@ A Retrieval-Augmented Generation (RAG) system that answers questions about the [
 
 - Python 3.12 or newer
 - [uv](https://docs.astral.sh/uv/) (dependency and environment manager)
+- curl -LsSf https://astral.sh/uv/install.sh | sh
+- source $HOME/.local/bin/env
 - `make`
 - The vLLM v0.10.1 source tree placed at `data/raw/vllm-0.10.1/`
 - The datasets placed under `datasets_public/public/` (`UnansweredQuestions/` and `AnsweredQuestions/`)
@@ -341,4 +343,12 @@ make killAPI     # stops the server
 ```
 
 ## Resources
+https://www.youtube.com/watch?v=lD3_VF5bmWg   
+https://www.youtube.com/watch?v=lD3_VF5bmWg   
+https://www.youtube.com/watch?v=ziiF1eFM3_4&t=704s   
+https://www.youtube.com/watch?v=PcHbyGVoqZk   
+https://www.youtube.com/results?search_query=metodos+http
 
+
+## IA used
+The IA was used to created the structure of this README, and to documentation and deep search about concepts!

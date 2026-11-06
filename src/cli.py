@@ -68,7 +68,7 @@ class Rag:
         bm25.save(str(PROCESSED_DIR))
         return "\033[93mIndexing complete!"
 
-    def search(self, query: str, k: int) -> None:
+    def search(self, query: str, k: int) -> MinimalSearchResults:
         """
         Retrieve the most relevant chunks for a single query.
         Uses the BM25 index to find the top-k matching sources
@@ -82,6 +82,7 @@ class Rag:
             json.dump(minimal_search_results.model_dump(), f, indent=4)
         print(f"\033[96mThe file with the top-k sources to query: "
               f"'{query}' was created in {PATH_FILE/"search_results.json"}")
+        return minimal_search_results
 
     def search_dataset(
             self,
@@ -123,7 +124,7 @@ class Rag:
 
         DESTINY_DIR = Path(save_directory)
         DESTINY_DIR.mkdir(exist_ok=True, parents=True)
-        with open(DESTINY_DIR / "search_results.json",
+        with open(DESTINY_DIR / "search_dataset_results.json",
                   "w",
                   encoding="utf-8") as f:
             json.dump(StudentSearchResults(
@@ -172,8 +173,7 @@ class Rag:
         answers_list: list[MinimalAnswer] = []
 
         for metadata in tqdm(search_results.search_results,
-                             desc=(f"Answering questions from file "
-                                   f"{student_search_results_path}")):
+                             desc=("Answering questions")):
             answers_list.append(self.__construct_answers_list(metadata,
                                                               tokenizer,
                                                               model))
