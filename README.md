@@ -53,6 +53,18 @@ make install        # runs `uv sync`
 | `make fclean` | Same as `clean`, and also remove `.venv` |
 | `make help` | List all available commands |
 
+### Moulinette Run
+#### The moulinette compares retrieve of the expected output with the student output 
+You must have the "moulinette-ubuntu" executable in the root of the project.   
+- To Code Questions:   
+make search_dataset (with the code dataset_path)   
+./moulinette-ubuntu evaluate_student_search_results data/output/search_results/dataset_code_public.json data/datasets/AnsweredQuestions/dataset_code_public.json --k 5 --max_context_length 2000   
+
+- To Docs Questions:  
+make search_dataset (with the docs dataset_path)   
+./moulinette-ubuntu evaluate_student_search_results data/output/search_results/dataset_docs_public.json data/datasets/AnsweredQuestions/dataset_docs_public.json --k 5 --max_context_length 2000   
+
+
 ### CLI reference
 
 All commands are exposed through `python -m src <command>`:
@@ -327,10 +339,10 @@ make killAPI     # stops the server
 ├── data/
 │   ├── raw/vllm-0.10.1/        # vLLM source tree (input)
 │   ├── processed/              # chunks.json and the BM25 index
-│   └── output/                 # results of the `search` command
-├── datasets_public/public/
-│   ├── UnansweredQuestions/
-│   └── AnsweredQuestions/
+│   ├── output/                 # results of the `search` command
+|   └── datasets/
+|        ├── UnansweredQuestions/
+|        └── AnsweredQuestions/
 └── src/
     ├── __main__.py             # CLI entry point
     ├── api.py                  # FastAPI application

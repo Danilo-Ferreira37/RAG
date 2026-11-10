@@ -105,6 +105,16 @@ class Rag:
         ):
             raise ValueError("The variable 'k' must to be"
                              " a positive integer")
+        try:
+            _ = bm25s.BM25.load(PROCESSED_DIR)
+        except (OSError, ValueError, KeyError, TypeError):
+            raise RAGError("Index BM25 not found, executes "
+                           "the command index!")
+        chunks_path = PROCESSED_DIR / "chunks.json"
+        PROCESSED_DIR.mkdir(exist_ok=True, parents=True)
+        if not chunks_path.is_file():
+            raise FileNotFoundError("File 'chunks.json' not found!"
+                                    ", executes the command index!")
 
         list_minimal_search_results: list[MinimalSearchResults] = []
         for question in tqdm(load_questions(dataset_path),
@@ -123,13 +133,15 @@ class Rag:
                 retrieved_sources=top_k_chunks.retrieved_sources))
 
         DESTINY_DIR = Path(save_directory)
+        file_name = Path(dataset_path)
         DESTINY_DIR.mkdir(exist_ok=True, parents=True)
-        with open(DESTINY_DIR / "search_dataset_results.json",
+        with open(DESTINY_DIR / file_name.name,
                   "w",
                   encoding="utf-8") as f:
             json.dump(StudentSearchResults(
                 search_results=list_minimal_search_results,
-                k=k).model_dump(), f, indent=4)
+                k=4).model_dump(), f, indent=4
+                )
 
     def answer(self, query: str, k: int) -> str:
         """
