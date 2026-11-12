@@ -28,7 +28,7 @@ clean:
 	@clear
 
 fclean: clean
-	@# @rm -rf data
+	@rm -rf data
 	@rm -rf .venv/
 
 lint:

@@ -2,7 +2,7 @@
 
 # RAG against the machine
 
-A Retrieval-Augmented Generation (RAG) system that answers questions about the [vLLM](https://github.com/vllm-project/vllm) codebase (v0.10.1) and its documentation.
+A Retrieval-Augmented Generation (RAG) system that answers questions about the vLLM codebase (v0.10.1) and its documentation.
 
 ## Description
 
@@ -34,6 +34,28 @@ A Retrieval-Augmented Generation (RAG) system that answers questions about the [
 make install        # runs `uv sync`
 ```
 
+### Provided files (.zip)
+
+Place these archives in the root of the repository and extract them as shown below.
+
+| Archive | Contents | Purpose |
+| --- | --- | --- |
+| `provided_files/vllm-0.10.1.zip` | `vllm-0.10.1/`: the vLLM v0.10.1 source tree | Knowledge base that is chunked and indexed |
+| `provided_files/datasets_public.zip` | `datasets_public/public/AnsweredQuestions/` and `UnansweredQuestions/`, each with `dataset_code_public.json` and `dataset_docs_public.json` | Public questions (with and without reference answers) used for development and evaluation |
+| `provided_files/moulinette1.zip` | `moulinette-ubuntu` and `moulinette-fedora` (binaries) | Official evaluator that computes recall@k |
+
+```bash
+# vLLM source code -> data/raw/vllm-0.10.1/
+mkdir -p data/raw && unzip provided_files/vllm-0.10.1.zip -d data/raw/
+
+# Public datasets -> datasets_public/public/...
+mkdir -p data/ && unzip provided_files/datasets_public.zip -d data/
+
+# Moulinette binaries (use the one that matches your OS)
+unzip provided_files/moulinette1.zip
+chmod +x moulinette-ubuntu moulinette-fedora
+```
+
 ### Makefile commands
 
 | Command | Description |
@@ -58,11 +80,11 @@ make install        # runs `uv sync`
 You must have the "moulinette-ubuntu" executable in the root of the project.   
 - To Code Questions:   
 make search_dataset (with the code dataset_path)   
-./moulinette-ubuntu evaluate_student_search_results data/output/search_results/dataset_code_public.json data/datasets/AnsweredQuestions/dataset_code_public.json --k 5 --max_context_length 2000   
+./moulinette-ubuntu evaluate_student_search_results data/output/search_results/dataset_code_public.json data/datasets_public/public/AnsweredQuestions/dataset_code_public.json --k 5 --max_context_length 2000   
 
 - To Docs Questions:  
 make search_dataset (with the docs dataset_path)   
-./moulinette-ubuntu evaluate_student_search_results data/output/search_results/dataset_docs_public.json data/datasets/AnsweredQuestions/dataset_docs_public.json --k 5 --max_context_length 2000   
+./moulinette-ubuntu evaluate_student_search_results data/output/search_results/dataset_docs_public.json data/datasets_public/public/AnsweredQuestions/dataset_docs_public.json --k 5 --max_context_length 2000   
 
 
 ### CLI reference
@@ -198,12 +220,9 @@ uv run python -m src evaluate <retrieved_results.json> <answered_dataset.json>
 
 | Dataset | k | Recall@k | Questions evaluated |
 | --- | --- | --- | --- |
-| Docs | 5 | _TODO_ | _TODO_ |
-| Code | 5 | _TODO_ | _TODO_ |
+| Docs | 5 |  0.840 | 100 |
+| Code | 5 |  0.530 | 100 |
 
-### Discussion
-
-_TODO: comment on the recall obtained, how it changes with `k` and with the chunk size, which types of questions fail (for example, paraphrased questions with little lexical overlap), and the answer quality of the language model._
 
 ## Design decisions
 
@@ -336,8 +355,13 @@ make killAPI     # stops the server
 ├── Makefile
 ├── pyproject.toml
 ├── README.md
+├── moulinette-ubuntu           # from moulinette1.zip
+├── moulinette-fedora           # from moulinette1.zip
+├── datasets_public/public/     # from datasets_public.zip
+│   ├── UnansweredQuestions/
+│   └── AnsweredQuestions/
 ├── data/
-│   ├── raw/vllm-0.10.1/        # vLLM source tree (input)
+│   ├── raw/vllm-0.10.1/        # vLLM source tree (from vllm-0.10.1.zip)
 │   ├── processed/              # chunks.json and the BM25 index
 │   ├── output/                 # results of the `search` command
 |   └── datasets/
@@ -360,7 +384,8 @@ https://www.youtube.com/watch?v=lD3_VF5bmWg
 https://www.youtube.com/watch?v=ziiF1eFM3_4&t=704s   
 https://www.youtube.com/watch?v=PcHbyGVoqZk   
 https://www.youtube.com/results?search_query=metodos+http
-
+https://github.com/google/python-fire
+https://fastapi.tiangolo.com/
 
 ## IA used
 The IA was used to created the structure of this README, and to documentation and deep search about concepts!
